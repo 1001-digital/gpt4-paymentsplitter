@@ -32,6 +32,19 @@ describe('PaymentSplitter', () => {
     expect(storedReceivers).to.deep.equal(addresses.map((addr, i) => ([ addr, basisPoints[i] ])))
   })
 
+  it('Should not allow non-owner to set receivers', async () => {
+    const basisPoints = [5000, 3000, 2000]
+    const nonOwner = signers[0]
+    const addresses = await Promise.all(
+      signers.slice(0, basisPoints.length).map(async (signer) => signer.getAddress())
+    )
+
+    // Try to call setReceivers as a non-owner
+    await expect(
+      PaymentSplitter.connect(nonOwner).setReceivers(addresses, basisPoints)
+    ).to.be.revertedWith('Ownable: caller is not the owner')
+  })
+
   it('Should fail to set receivers with invalid basis points', async () => {
     const basisPoints = [5000, 4000, 2000]
     const addresses = await Promise.all(signers.slice(0, basisPoints.length).map(async (signer) => signer.getAddress()))
@@ -57,5 +70,17 @@ describe('PaymentSplitter', () => {
     })
 
     expect(await ethers.provider.getBalance(PaymentSplitter.address)).to.equal(0)
+  })
+
+  it('Should not allow non-owner to withdraw', async () => {
+    const nonOwner = signers[0];
+
+    // Send some funds to the contract
+    await owner.sendTransaction({ to: PaymentSplitter.address, value: ethers.utils.parseEther('1') })
+
+    // Try to call withdraw as a non-owner
+    await expect(
+      PaymentSplitter.connect(nonOwner).withdraw()
+    ).to.be.revertedWith('Ownable: caller is not the owner')
   })
 })
