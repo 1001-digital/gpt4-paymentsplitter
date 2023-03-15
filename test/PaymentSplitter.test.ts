@@ -83,4 +83,33 @@ describe('PaymentSplitter', () => {
       PaymentSplitter.connect(nonOwner).withdraw()
     ).to.be.revertedWith('Ownable: caller is not the owner')
   })
+
+  it('Should not allow to withdraw when there is nothing to withdraw', async () => {
+    await expect(PaymentSplitter.connect(owner).withdraw()).to.be.revertedWith('No funds to withdraw')
+  })
+
+  it('Should not allow setting receivers with mismatched input array lengths', async () => {
+    const basisPoints = [5000, 3000, 2000]
+    const addresses = await Promise.all(
+      signers.slice(0, basisPoints.length - 1).map(async (signer) => signer.getAddress())
+    )
+
+    await expect(
+      PaymentSplitter.connect(owner).setReceivers(addresses, basisPoints)
+    ).to.be.revertedWith('Input arrays must have the same length')
+  })
+
+  it('Should not allow setting an empty array of receivers', async () => {
+    await expect(PaymentSplitter.connect(owner).setReceivers([], []))
+      .to.be.revertedWith('At least one receiver must be set')
+  })
+
+  it('Should not allow setting receivers with a total basis points different from 10000', async () => {
+    const basisPoints = [5000, 3000, 1000]
+    const addresses = await Promise.all(signers.slice(0, basisPoints.length).map(async (signer) => signer.getAddress()))
+
+    await expect(
+      PaymentSplitter.connect(owner).setReceivers(addresses, basisPoints)
+    ).to.be.revertedWith('Total basis points must equal 10000')
+  })
 })
